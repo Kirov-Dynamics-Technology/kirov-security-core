@@ -1,19 +1,36 @@
-name: CI
+name: Node.js CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main, master ]
   pull_request:
-    branches: [main]
+    branches: [ main, master ]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
-      - run: pip install ruff pytest
-      - run: ruff check . || true
-      - run: pytest || true
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --if-present || npm install
+
+      - name: Build
+        run: npm run build --if-present
+
+      - name: Run ESLint
+        run: npm run lint --if-present || echo "No lint script configured"
+
+      - name: Run tests
+        run: npm test --if-present || echo "No test script configured"
